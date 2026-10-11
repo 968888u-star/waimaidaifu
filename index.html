@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>美团外卖 · 代付点单</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: #f4f5f7; color: #191919; font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #f4f5f7; position: relative; padding-bottom: 100px; }
+  button { font-family: inherit; border: none; background: none; cursor: pointer; color: inherit; font-size: inherit; }
+  input { font-family: inherit; }
+  .price { color: #FF4B33; font-weight: 700; }
+  .card { background: #fff; border-radius: 12px; margin: 10px 12px; padding: 14px; }
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+
+  .header-bar {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; gap: 8px;
+    background: #FFD100; padding: 12px 14px; font-size: 16px; font-weight: 600;
+  }
+  .header-bar.plain { background: #fff; border-bottom: 1px solid #eee; }
+  .back-btn {
+    font-size: 26px; line-height: 1; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; padding-bottom: 4px;
+  }
+  .back-btn.dark { color: #191919; }
+
+  .home-top { background: #FFD100; padding: 14px 16px 18px; }
+  .loc-row { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+  .loc-text { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .search-box {
+    margin-top: 12px; background: #fff; border-radius: 20px;
+    padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+    color: #999; font-size: 14px;
+  }
+  .promo {
+    margin: 12px; padding: 12px 14px; border-radius: 10px;
+    background: linear-gradient(135deg, #FFF3D6, #FFE7B0);
+    color: #8A5A00; font-size: 13px; font-weight: 500;
+  }
+  .section-title { padding: 4px 16px 10px; font-size: 16px; font-weight: 700; }
+  .shop-list { padding: 0 12px; }
+  .shop-card {
+    background: #fff; border-radius: 12px; padding: 14px;
+    display: flex; gap: 12px; margin-bottom: 10px; align-items: center;
+    transition: transform .12s;
+  }
+  .shop-card:active { transform: scale(.985); }
+  .shop-emoji {
+    width: 54px; height: 54px; border-radius: 12px; background: #FFF6D9;
+    display: flex; align-items: center; justify-content: center; font-size: 28px; flex: none;
+  }
+  .shop-body { flex: 1; min-width: 0; }
+  .shop-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .shop-row { display: flex; gap: 10px; font-size: 12px; color: #888; }
+  .shop-row.sub { color: #aaa; margin-top: 2px; }
+  .star { color: #FF8A00; font-weight: 600; }
+
+  .shop-banner {
+    background: #fff; padding: 18px 16px; display: flex;
+    flex-direction: column; align-items: center; gap: 6px;
+  }
+  .shop-banner-emoji {
+    width: 64px; height: 64px; border-radius: 16px; background: #FFF6D9;
+    display: flex; align-items: center; justify-content: center; font-size: 34px;
+  }
+  .shop-banner-name { font-size: 17px; font-weight: 700; }
+  .shop-banner-meta { font-size: 12px; color: #888; }
+  .menu { padding: 8px 12px 0; }
+  .cat-title { font-size: 15px; font-weight: 700; padding: 12px 4px 8px; }
+  .dish {
+    background: #fff; border-radius: 12px; padding: 12px;
+    display: flex; gap: 12px; align-items: center; margin-bottom: 8px;
+  }
+  .dish-img {
+    width: 60px; height: 60px; border-radius: 10px; background: #F7F8FA;
+    display: flex; align-items: center; justify-content: center; font-size: 30px; flex: none;
+  }
+  .dish-body { flex: 1; min-width: 0; }
+  .dish-name { font-size: 15px; font-weight: 600; }
+  .dish-desc { font-size: 12px; color: #999; margin: 3px 0 6px; }
+  .dish-price { color: #FF4B33; font-weight: 700; font-size: 15px; }
+  .qty-ctrl { display: flex; align-items: center; gap: 8px; flex: none; }
+  .qty-btn {
+    width: 26px; height: 26px; border-radius: 50%; font-size: 18px;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  .qty-btn.plus { background: #FFD100; color: #191919; font-weight: 700; }
+  .qty-btn.minus { border: 1px solid #ddd; color: #666; }
+  .qty-num { min-width: 16px; text-align: center; font-weight: 600; }
+
+  .cart-bar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; background: #2B2B2B;
+    display: flex; align-items: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    z-index: 100;
+  }
+  .cart-left { flex: 1; display: flex; align-items: center; gap: 12px; padding-left: 6px; }
+  .cart-ico { position: relative; font-size: 26px; }
+  .cart-badge {
+    position: absolute; top: -4px; right: -8px; background: #FF4B33; color: #fff;
+    font-size: 11px; border-radius: 10px; padding: 1px 6px; font-weight: 700;
+  }
+  .cart-price { color: #fff; font-size: 18px; font-weight: 700; }
+  .cart-btn {
+    background: #FFD100; color: #191919; font-weight: 700;
+    padding: 11px 24px; border-radius: 22px; font-size: 15px;
+  }
+  .cart-btn.disabled { background: #555; color: #aaa; }
+
+  .co-addr { display: flex; gap: 10px; align-items: flex-start; }
+  .co-addr-icon { font-size: 18px; }
+  .co-addr-name { font-weight: 600; font-size: 15px; }
+  .co-addr-phone { color: #888; font-weight: 400; font-size: 13px; margin-left: 6px; }
+  .co-addr-detail { color: #666; font-size: 13px; margin-top: 2px; }
+  .co-edit { margin-left: auto; color: #FF8A00; font-size: 13px; flex: none; }
+  .co-shop-name { font-weight: 600; font-size: 15px; margin-bottom: 10px; }
+  .co-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; }
+  .co-item-emoji { font-size: 18px; }
+  .co-item-name { flex: 1; color: #444; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .co-item-qty { color: #999; }
+  .co-item-price { color: #333; min-width: 56px; text-align: right; }
+  .co-line {
+    display: flex; justify-content: space-between; padding: 6px 0;
+    font-size: 13px; color: #666; border-top: 1px solid #f5f5f5; margin-top: 8px;
+  }
+  .co-line.total { font-size: 15px; color: #191919; font-weight: 600; border: none; }
+  .co-section-title { font-weight: 600; margin-bottom: 10px; }
+  .pay-opt {
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    border: 1.5px solid #eee; border-radius: 10px; margin-bottom: 10px;
+  }
+  .pay-opt.active { border-color: #FFD100; background: #FFFCF0; }
+  .pay-opt-ico { font-size: 22px; }
+  .pay-opt-body { flex: 1; }
+  .pay-opt-name { font-weight: 600; font-size: 14px; }
+  .pay-opt-desc { font-size: 12px; color: #999; margin-top: 2px; }
+  .radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #ddd; flex: none; }
+  .pay-opt.active .radio { border-color: #FFD100; background: #FFD100; box-shadow: inset 0 0 0 3px #fff; }
+  .addr-box { background: #F7F8FA; border-radius: 8px; padding: 10px 12px; }
+  .addr-label { font-size: 12px; color: #888; margin-bottom: 3px; }
+  .addr-value { font-size: 13px; word-break: break-all; font-family: ui-monospace, Menlo, monospace; }
+  .co-hint { font-size: 12px; color: #aaa; margin-top: 8px; }
+
+  .checkout-bottom, .pay-bottom {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; background: #fff;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 -2px 14px rgba(0,0,0,.07); z-index: 100;
+  }
+  .co-total { flex: 1; font-size: 14px; }
+  .co-total .price { font-size: 20px; }
+  .primary-btn {
+    background: #FFD100; color: #191919; font-weight: 700; font-size: 15px;
+    padding: 12px 26px; border-radius: 24px; white-space: nowrap;
+  }
+  .primary-btn.big { width: 100%; padding: 15px; border-radius: 26px; font-size: 16px; }
+  .ghost-btn {
+    background: #F4F5F7; color: #444; font-weight: 600; font-size: 14px;
+    padding: 12px 20px; border-radius: 24px; white-space: nowrap;
+  }
+
+  .share-hero { text-align: center; padding: 30px 20px 20px; }
+  .share-ico { font-size: 44px; }
+  .share-title { font-size: 16px; font-weight: 600; margin-top: 10px; }
+  .share-amount { font-size: 34px; font-weight: 800; color: #FF4B33; margin: 8px 0 4px; }
+  .share-sub { font-size: 13px; color: #999; }
+  .link-box { display: flex; align-items: center; gap: 10px; background: #F7F8FA; border-radius: 8px; padding: 10px 12px; }
+  .link-text {
+    flex: 1; font-size: 12px; color: #666; word-break: break-all;
+    font-family: ui-monospace, Menlo, monospace; max-height: 40px; overflow: hidden;
+  }
+  .copy-btn {
+    background: #FFD100; color: #191919; font-weight: 700;
+    padding: 7px 16px; border-radius: 16px; font-size: 13px; flex: none;
+  }
+
+  .pay-header { text-align: center; padding: 36px 20px 26px; background: #fff; }
+  .pay-avatar {
+    width: 60px; height: 60px; border-radius: 50%; background: #FFF6D9;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; margin: 0 auto 12px;
+  }
+  .pay-invite { font-size: 15px; color: #333; }
+  .pay-amount { font-size: 36px; font-weight: 800; color: #FF4B33; margin-top: 6px; }
+
+  .pay-done { text-align: center; padding: 60px 24px 40px; }
+  .pay-done-ico { font-size: 60px; }
+  .pay-done-title { font-size: 20px; font-weight: 700; margin-top: 14px; }
+  .pay-done-amount { font-size: 34px; font-weight: 800; color: #FF4B33; margin-top: 8px; }
+  .pay-done-sub { color: #888; font-size: 13px; margin-top: 6px; }
+  .pay-done-addr {
+    color: #aaa; font-size: 12px; margin-top: 14px; word-break: break-all;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .sync-note {
+    display: inline-block; margin-top: 14px; font-size: 12px; color: #22B14C;
+    background: #EBFAF0; padding: 5px 12px; border-radius: 12px;
+  }
+  .done-actions { display: flex; flex-direction: column; gap: 10px; align-items: stretch; margin-top: 28px; }
+  .done-actions .primary-btn, .done-actions .ghost-btn { width: 100%; padding: 14px; border-radius: 24px; }
+
+  .order-list { padding: 10px 12px; }
+  .order-card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .order-top { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; gap: 8px; }
+  .order-status { font-size: 12px; font-weight: 500; flex: none; }
+  .order-status.unpaid { color: #FF8A00; }
+  .order-status.paid { color: #22B14C; }
+  .order-role {
+    display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px;
+    background: #F0F1F3; color: #888; margin-right: 6px; vertical-align: middle; font-weight: 500;
+  }
+  .order-role.payer { background: #E9F3FF; color: #3D7EFF; }
+  .order-items { font-size: 13px; color: #888; margin: 8px 0; line-height: 1.6; }
+  .order-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #aaa; }
+  .order-bottom .price { font-size: 16px; }
+  .order-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+  .mini-btn {
+    font-size: 13px; padding: 7px 16px; border-radius: 16px;
+    border: 1px solid #ddd; color: #555; font-weight: 500;
+  }
+  .mini-btn.primary { background: #FFD100; border-color: #FFD100; color: #191919; font-weight: 700; }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+  .field input {
+    width: 100%; border: 1px solid #eee; background: #F7F8FA;
+    border-radius: 8px; padding: 11px 12px; font-size: 14px; outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus { border-color: #FFD100; background: #fff; }
+  .hint { font-size: 12px; color: #aaa; margin-top: 10px; }
+
+  .tabbar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px; background: #fff;
+    display: flex; border-top: 1px solid #eee;
+    padding-bottom: env(safe-area-inset-bottom); z-index: 100;
+  }
+  .tab { flex: 1; text-align: center; padding: 8px 0 6px; color: #999; }
+  .tab.active { color: #191919; }
+  .tab-ico { font-size: 20px; line-height: 1.2; }
+  .tab-label { font-size: 11px; margin-top: 1px; }
+
+  .empty-page {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 100px 24px; color: #999; text-align: center;
+  }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 120px; transform: translate(-50%, 16px);
+    background: rgba(0,0,0,.82); color: #fff; padding: 10px 22px; border-radius: 8px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s ease;
+    z-index: 9999; white-space: nowrap; max-width: 82vw; overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   商家数据
+   ========================================================= */
+const SHOPS = [
+  {
+    id: 'chuan', name: '川味小厨 · 麻辣香锅', emoji: '🌶️',
+    rating: 4.8, monthSales: 2134, deliveryTime: '30分钟', distance: '1.2km',
+    deliveryFee: 3, minOrder: 20,
+    categories: [
+      { name: '招牌热销', items: [
+        { id: 'c1', name: '水煮牛肉', desc: '精选牛里脊 · 麻辣鲜香', price: 38, emoji: '🥘' },
+        { id: 'c2', name: '麻辣香锅', desc: '多种配菜 · 香辣过瘾', price: 45, emoji: '🍲' },
+        { id: 'c3', name: '宫保鸡丁', desc: '酸甜微辣 · 下饭神器', price: 28, emoji: '🍗' },
+        { id: 'c4', name: '酸辣土豆丝', desc: '爽脆可口', price: 16, emoji: '🥔' }
+      ]},
+      { name: '主食', items: [
+        { id: 'c5', name: '米饭', desc: '东北珍珠米', price: 2, emoji: '🍚' },
+        { id: 'c6', name: '担担面', desc: '手工面条 · 芝麻酱香', price: 18, emoji: '🍜' }
+      ]},
+      { name: '饮品', items: [
+        { id: 'c7', name: '酸梅汤', desc: '解辣必备', price: 8, emoji: '🥤' },
+        { id: 'c8', name: '冰镇可乐', desc: '330ml', price: 5, emoji: '🥤' }
+      ]}
+    ]
+  },
+  {
+    id: 'boba', name: '茶百道 · 手作奶茶', emoji: '🧋',
+    rating: 4.9, monthSales: 5621, deliveryTime: '20分钟', distance: '0.8km',
+    deliveryFee: 2, minOrder: 15,
+    categories: [
+      { name: '人气推荐', items: [
+        { id: 'b1', name: '杨枝甘露', desc: '芒果西柚西米露', price: 19, emoji: '🥭' },
+        { id: 'b2', name: '芋泥波波奶茶', desc: '荔浦芋头 · 现煮波波', price: 17, emoji: '🧋' },
+        { id: 'b3', name: '茉莉奶绿', desc: '清香茉莉 · 醇厚奶香', price: 14, emoji: '🍵' }
+      ]},
+      { name: '小食', items: [
+        { id: 'b4', name: '芝士红薯', desc: '拉丝芝士 · 现烤', price: 12, emoji: '🍠' },
+        { id: 'b5', name: '蛋挞（2只）', desc: '酥皮现烤', price: 10, emoji: '🥧' }
+      ]}
+    ]
+  },
+  {
+    id: 'burger', name: '疯狂汉堡 · 炸鸡', emoji: '🍔',
+    rating: 4.6, monthSales: 1832, deliveryTime: '25分钟', distance: '2.1km',
+    deliveryFee: 4, minOrder: 25,
+    categories: [
+      { name: '汉堡', items: [
+        { id: 'h1', name: '双层牛肉堡', desc: '双层安格斯牛肉饼', price: 32, emoji: '🍔' },
+        { id: 'h2', name: '香辣鸡腿堡', desc: '整块鸡腿肉', price: 22, emoji: '🍔' }
+      ]},
+      { name: '炸物', items: [
+        { id: 'h3', name: '黄金薯条', desc: '大份 · 外脆里糯', price: 12, emoji: '🍟' },
+        { id: 'h4', name: '炸鸡桶（4块）', desc: '外酥里嫩', price: 39, emoji: '🍗' }
+      ]}
+    ]
+  }
+];
+
+/* =========================================================
+   状态
+   ========================================================= */
+const STORE_KEY = 'mt_takeout_v2';
+
+function defaultState() {
+  return {
+    settings: {
+      payAddressName: '商户收款账户',
+      payAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      receiver: { name: '张三', phone: '138 8888 8888', address: '阳光小区 3 栋 502 室' }
+    },
+    cart: { shopId: null, items: {} },
+    payMethod: 'self',
+    orders: []
+  };
+}
+
+let S = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return defaultState();
+    const s = JSON.parse(raw);
+    const d = defaultState();
+    if (!s.settings) s.settings = d.settings;
+    if (!s.settings.receiver) s.settings.receiver = d.settings.receiver;
+    if (!s.cart) s.cart = d.cart;
+    if (!s.orders) s.orders = [];
+    if (!s.payMethod) s.payMethod = 'self';
+    return s;
+  } catch (e) { return defaultState(); }
+}
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
+}
+
+/* 同浏览器多标签同步 */
+window.addEventListener('storage', (e) => {
+  if (e.key === STORE_KEY) {
+    S = loadState();
+    render(true);
+  }
+});
+
+/* =========================================================
+   工具
+   ========================================================= */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 1900);
+}
+
+function go(hash) {
+  if (location.hash === hash) render();
+  else location.hash = hash;
+}
+
+function baseUrl() {
+  return location.href.split('#')[0];
+}
+
+function genOrderId() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${Math.floor(Math.random() * 9000 + 1000)}`;
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function findShop(id) { return SHOPS.find(s => s.id === id); }
+
+function findItem(shopId, itemId) {
+  const shop = findShop(shopId);
+  if (!shop) return null;
+  for (const cat of shop.categories) {
+    const it = cat.items.find(i => i.id === itemId);
+    if (it) return it;
+  }
+  return null;
+}
+
+function calcSubtotal(shopId, cart) {
+  let sum = 0;
+  for (const [itemId, qty] of Object.entries(cart)) {
+    const it = findItem(shopId, itemId);
+    if (it) sum += it.price * qty;
+  }
+  return sum;
+}
+
+/* =========================================================
+   链接编解码（跨设备关键）
+   使用 base64url 承载完整订单数据
+   ========================================================= */
+function encodeData(obj) {
+  try {
+    const json = JSON.stringify(obj);
+    const bytes = new TextEncoder().encode(json);
+    let bin = '';
+    bytes.forEach(b => bin += String.fromCharCode(b));
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  } catch (e) { return ''; }
+}
+
+function decodeData(str) {
+  try {
+    let b64 = String(str).replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch (e) { return null; }
+}
+
+/* 内部订单 → 精简分享数据 */
+function serializeOrder(o) {
+  return {
+    v: 1,
+    id: o.id,
+    sn: o.shopName,
+    se: o.shopEmoji,
+    it: o.items.map(i => ({ n: i.name, p: i.price, q: i.qty, m: i.emoji })),
+    df: o.deliveryFee,
+    tt: o.total,
+    pa: o.payAddress,
+    pn: o.payAddressName,
+    rc: { n: o.receiver.name, ph: o.receiver.phone, ad: o.receiver.address },
+    ct: o.createdAt
+  };
+}
+
+/* 分享数据 → 渲染用订单对象 */
+function deserializeOrder(d) {
+  return {
+    id: d.id,
+    shopName: d.sn,
+    shopEmoji: d.se,
+    items: (d.it || []).map(i => ({ name: i.n, price: i.p, qty: i.q, emoji: i.m })),
+    deliveryFee: Number(d.df) || 0,
+    total: Number(d.tt) || 0,
+    payAddress: d.pa,
+    payAddressName: d.pn,
+    receiver: { name: d.rc ? d.rc.n : '', phone: d.rc ? d.rc.ph : '', address: d.rc ? d.rc.ad : '' },
+    createdAt: d.ct
+  };
+}
+
+function payHashFor(order) {
+  return '#/pay/' + encodeData(serializeOrder(order));
+}
+
+function receiptDataFor(order) {
+  return {
+    v: 1,
+    oid: order.id,
+    tt: order.total,
+    sn: order.shopName,
+    se: order.shopEmoji,
+    pa: order.payAddress,
+    pn: order.payAddressName,
+    at: order.paidAt || Date.now()
+  };
+}
+
+function receiptHashFor(order) {
+  return '#/receipt/' + encodeData(receiptDataFor(order));
+}
+
+/* =========================================================
+   复制
+   ========================================================= */
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => toast('已复制到剪贴板'),
+      () => fallbackCopy(text)
+    );
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toast('已复制到剪贴板'); }
+  catch (e) { toast('复制失败，请长按选择复制'); }
+  document.body.removeChild(ta);
+}
+
+/* =========================================================
+   购物车
+   ========================================================= */
+function incItem(shopId, itemId) {
+  if (S.cart.shopId !== shopId) { S.cart.shopId = shopId; S.cart.items = {}; }
+  S.cart.items[itemId] = (S.cart.items[itemId] || 0) + 1;
+  save();
+  render(true);
+}
+
+function decItem(shopId, itemId) {
+  const items = S.cart.items;
+  if (!items[itemId]) return;
+  items[itemId]--;
+  if (items[itemId] <= 0) delete items[itemId];
+  if (Object.keys(items).length === 0) S.cart.shopId = null;
+  save();
+  render(true);
+}
+
+function setPayMethod(m) {
+  S.payMethod = m;
+  save();
+  render(true);
+}
+
+/* =========================================================
+   下单
+   ========================================================= */
+function submitOrder() {
+  const shopId = S.cart.shopId;
+  const shop = findShop(shopId);
+  if (!shop) { toast('购物车为空'); return; }
+
+  const cart = S.cart.items;
+  const subtotal = calcSubtotal(shopId, cart);
+  if (subtotal < shop.minOrder) { toast('未达起送价'); return; }
+
+  const items = Object.entries(cart).map(([itemId, qty]) => {
+    const it = findItem(shopId, itemId);
+    return { id: itemId, name: it.name, price: it.price, qty, emoji: it.emoji };
+  });
+
+  const order = {
+    id: genOrderId(),
+    shopId: shop.id,
+    shopName: shop.name,
+    shopEmoji: shop.emoji,
+    items,
+    subtotal,
+    deliveryFee: shop.deliveryFee,
+    total: subtotal + shop.deliveryFee,
+    status: 'unpaid',
+    payMethod: S.payMethod || 'self',
+    payAddress: S.settings.payAddress,
+    payAddressName: S.settings.payAddressName,
+    receiver: Object.assign({}, S.settings.receiver),
+    createdAt: Date.now(),
+    paidAt: null,
+    role: 'owner'
+  };
+
+  S.orders.unshift(order);
+  S.cart = { shopId: null, items: {} };
+  save();
+
+  if (order.payMethod === 'friend') go('#/share/' + order.id);
+  else go(payHashFor(order));
+}
+
+/* 从订单页打开支付页 */
+function openPay(orderId) {
+  const o = S.orders.find(x => x.id === orderId);
+  if (!o) return toast('订单不存在');
+  go(payHashFor(o));
+}
+
+/* 从订单页复制代付链接 */
+function copyPayLink(orderId) {
+  const o = S.orders.find(x => x.id === orderId);
+  if (!o) return toast('订单不存在');
+  copyText(baseUrl() + payHashFor(o));
+}
+
+/* 从订单页复制回执链接 */
+function copyReceiptLink(orderId) {
+  const o = S.orders.find(x => x.id === orderId);
+  if (!o) return toast('订单不存在');
+  copyText(baseUrl() + receiptHashFor(o));
+}
+
+/* 付款页支付动作 */
+let currentShare = null;
+
+function doPay() {
+  if (!currentShare) return toast('订单数据异常');
+  const order = deserializeOrder(currentShare);
+  const now = Date.now();
+
+  const local = S.orders.find(o => o.id === order.id);
+  if (local) {
+    if (local.status === 'unpaid') {
+      local.status = 'paid';
+      local.paidAt = now;
+    }
+  } else {
+    // 代付方本地留一条记录
+    S.orders.unshift({
+      id: order.id,
+      shopId: '',
+      shopName: order.shopName,
+      shopEmoji: order.shopEmoji,
+      items: order.items.map(i => ({ id: '', name: i.name, price: i.price, qty: i.qty, emoji: i.emoji })),
+      subtotal: order.items.reduce((a, i) => a + i.price * i.qty, 0),
+      deliveryFee: order.deliveryFee,
+      total: order.total,
+      status: 'paid',
+      payMethod: 'friend',
+      payAddress: order.payAddress,
+      payAddressName: order.payAddressName,
+      receiver: order.receiver,
+      createdAt: order.createdAt,
+      paidAt: now,
+      role: 'payer'
+    });
+  }
+  save();
+
+  const receipt = {
+    v: 1, oid: order.id, tt: order.total,
+    sn: order.shopName, se: order.shopEmoji,
+    pa: order.payAddress, pn: order.payAddressName, at: now
+  };
+  go('#/receipt/' + encodeData(receipt));
+}
+
+/* 回执页复制链接 */
+function copyReceiptEncoded(encoded) {
+  copyText(baseUrl() + '#/receipt/' + encoded);
+}
+
+/* 回执页复制代付链接（再发给别人） */
+function copyPayFromReceipt(encoded) {
+  const r = decodeData(encoded);
+  if (!r) return;
+  const o = S.orders.find(x => x.id === r.oid);
+  if (o) copyPayLink(o.id);
+  else toast('本地无此订单');
+}
+
+/* =========================================================
+   设置
+   ========================================================= */
+function updateSetting(path, value) {
+  const keys = path.split('.');
+  let obj = S.settings;
+  for (let i = 0; i < keys.length - 1; i++) obj = obj[keys[i]];
+  obj[keys[keys.length - 1]] = value;
+  save();
+}
+
+function resetAll() {
+  if (!confirm('确定清空所有订单、购物车和设置吗？')) return;
+  localStorage.removeItem(STORE_KEY);
+  S = defaultState();
+  toast('已重置');
+  go('#/');
+}
+
+/* =========================================================
+   渲染
+   ========================================================= */
+function render(keepScroll) {
+  const y = keepScroll ? window.scrollY : 0;
+  const hash = location.hash || '#/';
+  const parts = hash.slice(1).split('/').filter(Boolean);
+  const root = parts[0] || 'home';
+
+  let html = '';
+  let showTab = false;
+
+  switch (root) {
+    case 'home':     html = renderHome();          showTab = true; break;
+    case 'shop':     html = renderShop(parts[1]);  break;
+    case 'checkout': html = renderCheckout();      break;
+    case 'share':    html = renderShare(parts[1]); break;
+    case 'pay':      html = renderPay(parts[1]);   break;
+    case 'receipt':  html = renderReceipt(parts[1]); break;
+    case 'orders':   html = renderOrders();        showTab = true; break;
+    case 'settings': html = renderSettings();      showTab = true; break;
+    default:         html = renderHome();          showTab = true;
+  }
+
+  document.getElementById('app').innerHTML = html + (showTab ? renderTabbar(root) : '');
+  window.scrollTo(0, y);
+}
+
+function renderTabbar(active) {
+  const tabs = [
+    { key: 'home',     label: '首页', icon: '🏠', hash: '#/' },
+    { key: 'orders',   label: '订单', icon: '📋', hash: '#/orders' },
+    { key: 'settings', label: '设置', icon: '⚙️', hash: '#/settings' }
+  ];
+  return `<div class="tabbar">${tabs.map(t => `
+    <div class="tab ${active === t.key ? 'active' : ''}" onclick="go('${t.hash}')">
+      <div class="tab-ico">${t.icon}</div>
+      <div class="tab-label">${t.label}</div>
+    </div>`).join('')}</div>`;
+}
+
+/* ---------- 首页 ---------- */
+function renderHome() {
+  const addr = S.settings.receiver.address || '请先设置收货地址';
+  return `
+  <div class="home-top">
+    <div class="loc-row">
+      <span>📍</span>
+      <span class="loc-text">${esc(addr)}</span>
+    </div>
+    <div class="search-box"><span>🔍</span><span>搜索商家、菜品</span></div>
+  </div>
+  <div class="promo">🎉 支持「找人代付」——生成链接发给好友，好友在任意设备都能帮你买单</div>
+  <div class="section-title">附近商家</div>
+  <div class="shop-list">
+    ${SHOPS.map(s => `
+      <div class="shop-card" onclick="go('#/shop/${s.id}')">
+        <div class="shop-emoji">${s.emoji}</div>
+        <div class="shop-body">
+          <div class="shop-name">${esc(s.name)}</div>
+          <div class="shop-row">
+            <span class="star">★ ${s.rating}</span>
+            <span>月售 ${s.monthSales}</span>
+            <span>${s.deliveryTime}</span>
+          </div>
+          <div class="shop-row sub">
+            <span>起送 ¥${s.minOrder}</span>
+            <span>配送 ¥${s.deliveryFee}</span>
+            <span>${s.distance}</span>
+          </div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+/* ---------- 店铺页 ---------- */
+function renderShop(shopId) {
+  const shop = findShop(shopId);
+  if (!shop) return `<div class="empty-page">店铺不存在</div>`;
+
+  const cart = (S.cart.shopId === shopId) ? S.cart.items : {};
+  const count = Object.values(cart).reduce((a, b) => a + b, 0);
+
+  let menuHtml = '';
+  shop.categories.forEach(cat => {
+    menuHtml += `<div class="cat-title">${esc(cat.name)}</div>`;
+    cat.items.forEach(it => {
+      const qty = cart[it.id] || 0;
+      menuHtml += `
+        <div class="dish">
+          <div class="dish-img">${it.emoji}</div>
+          <div class="dish-body">
+            <div class="dish-name">${esc(it.name)}</div>
+            <div class="dish-desc">${esc(it.desc)}</div>
+            <div class="dish-price">¥${it.price}</div>
+          </div>
+          <div class="qty-ctrl">
+            ${qty > 0 ? `<button class="qty-btn minus" onclick="decItem('${shop.id}','${it.id}')">−</button>` : ''}
+            ${qty > 0 ? `<span class="qty-num">${qty}</span>` : ''}
+            <button class="qty-btn plus" onclick="incItem('${shop.id}','${it.id}')">+</button>
+          </div>
+        </div>`;
+    });
+  });
+
+  const subtotal = calcSubtotal(shopId, cart);
+  const total = subtotal > 0 ? subtotal + shop.deliveryFee : 0;
+  const canOrder = subtotal >= shop.minOrder;
+  const diff = (shop.minOrder - subtotal).toFixed(2);
+
+  const btnAttr = canOrder ? `onclick="go('#/checkout')"` : `onclick="toast('还差 ¥${diff} 起送')"`;
+  const btnText = canOrder ? '去结算' : `差 ¥${diff} 起送`;
+
+  return `
+  <div class="header-bar">
+    <button class="back-btn" onclick="go('#/')">‹</button>
+    <span style="font-size:15px">${esc(shop.name)}</span>
+  </div>
+  <div class="shop-banner">
+    <div class="shop-banner-emoji">${shop.emoji}</div>
+    <div class="shop-banner-name">${esc(shop.name)}</div>
+    <div class="shop-banner-meta">★ ${shop.rating} · 月售 ${shop.monthSales} · ${shop.deliveryTime} · 配送 ¥${shop.deliveryFee}</div>
+  </div>
+  <div class="menu">${menuHtml}</div>
+  ${count > 0 ? `
+    <div class="cart-bar">
+      <div class="cart-left" onclick="go('#/checkout')">
+        <div class="cart-ico">🛒<span class="cart-badge">${count}</span></div>
+        <div class="cart-price">¥${total.toFixed(2)}</div>
+      </div>
+      <button class="cart-btn ${canOrder ? '' : 'disabled'}" ${btnAttr}>${btnText}</button>
+    </div>` : ''}`;
+}
+
+/* ---------- 结算页 ---------- */
+function renderCheckout() {
+  const shopId = S.cart.shopId;
+  const shop = findShop(shopId);
+  const cart = S.cart.items;
+
+  if (!shop || Object.keys(cart).length === 0) {
+    return `<div class="empty-page">
+      <div style="font-size:48px">🛒</div>
+      <p>购物车还是空的</p>
+      <button class="primary-btn" onclick="go('#/')">去逛逛</button>
+    </div>`;
+  }
+
+  const subtotal = calcSubtotal(shopId, cart);
+  const total = subtotal + shop.deliveryFee;
+  const r = S.settings.receiver;
+  const method = S.payMethod || 'self';
+
+  const itemsHtml = Object.entries(cart).map(([itemId, qty]) => {
+    const it = findItem(shopId, itemId);
+    if (!it) return '';
+    return `<div class="co-item">
+      <span class="co-item-emoji">${it.emoji}</span>
+      <span class="co-item-name">${esc(it.name)}</span>
+      <span class="co-item-qty">x${qty}</span>
+      <span class="co-item-price">¥${(it.price * qty).toFixed(2)}</span>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="header-bar plain">
+    <button class="back-btn dark" onclick="history.back()">‹</button>
+    <span style="font-size:16px">确认订单</span>
+  </div>
+
+  <div class="card">
+    <div class="co-addr">
+      <div class="co-addr-icon">📍</div>
+      <div style="flex:1">
+        <div class="co-addr-name">${esc(r.name)}<span class="co-addr-phone">${esc(r.phone)}</span></div>
+        <div class="co-addr-detail">${esc(r.address)}</div>
+      </div>
+      <button class="co-edit" onclick="go('#/settings')">修改</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="co-shop-name">${shop.emoji} ${esc(shop.name)}</div>
+    ${itemsHtml}
+    <div class="co-line"><span>配送费</span><span>¥${shop.deliveryFee.toFixed(2)}</span></div>
+    <div class="co-line total"><span>合计</span><span class="price">¥${total.toFixed(2)}</span></div>
+  </div>
+
+  <div class="card">
+    <div class="co-section-title">支付方式</div>
+    <div class="pay-opt ${method === 'self' ? 'active' : ''}" onclick="setPayMethod('self')">
+      <div class="pay-opt-ico">💳</div>
+      <div class="pay-opt-body">
+        <div class="pay-opt-name">自己支付</div>
+        <div class="pay-opt-desc">立即付款，商家马上开始备餐</div>
+      </div>
+      <div class="radio"></div>
+    </div>
+    <div class="pay-opt ${method === 'friend' ? 'active' : ''}" onclick="setPayMethod('friend')">
+      <div class="pay-opt-ico">👥</div>
+      <div class="pay-opt-body">
+        <div class="pay-opt-name">找人代付</div>
+        <div class="pay-opt-desc">生成链接发给好友，好友在任意设备都能付款</div>
+      </div>
+      <div class="radio"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="co-section-title">收款地址</div>
+    <div class="addr-box">
+      <div class="addr-label">${esc(S.settings.payAddressName || '收款账户')}</div>
+      <div class="addr-value">${esc(S.settings.payAddress)}</div>
+    </div>
+    <div class="co-hint">代付款项将结算至该地址，可在「设置」中修改</div>
+  </div>
+
+  <div class="checkout-bottom">
+    <div class="co-total">实付 <span class="price">¥${total.toFixed(2)}</span></div>
+    <button class="primary-btn" onclick="submitOrder()">
+      ${method === 'friend' ? '生成代付链接' : '提交订单'}
+    </button>
+  </div>`;
+}
+
+/* ---------- 分享页 ---------- */
+function renderShare(orderId) {
+  const o = S.orders.find(x => x.id === orderId);
+  if (!o) {
+    return `<div class="empty-page">
+      <div style="font-size:48px">🔍</div>
+      <p>订单不存在</p>
+      <button class="primary-btn" onclick="go('#/')">回到首页</button>
+    </div>`;
+  }
+
+  const link = baseUrl() + payHashFor(o);
+
+  return `
+  <div class="header-bar plain">
+    <button class="back-btn dark" onclick="go('#/orders')">‹</button>
+    <span style="font-size:16px">发起代付</span>
+  </div>
+
+  <div class="share-hero">
+    <div class="share-ico">🔗</div>
+    <div class="share-title">代付链接已生成</div>
+    <div class="share-amount">¥${o.total.toFixed(2)}</div>
+    <div class="share-sub">链接自带订单信息，好友在任何设备打开都能付款</div>
+  </div>
+
+  <div class="card">
+    <div class="link-box">
+      <div class="link-text">${esc(link)}</div>
+      <button class="copy-btn" onclick="copyPayLink('${o.id}')">复制</button>
+    </div>
+  </div>
+
+  ${orderDetailCard(o)}
+
+  <div class="checkout-bottom">
+    <button class="ghost-btn" onclick="openPay('${o.id}')">预览付款页</button>
+    <button class="primary-btn" style="flex:1" onclick="copyPayLink('${o.id}')">复制链接给好友</button>
+  </div>`;
+}
+
+/* ---------- 付款页 ---------- */
+function renderPay(encoded) {
+  const decoded = decodeData(encoded);
+
+  if (!decoded || !decoded.id) {
+    currentShare = null;
+    return `<div class="empty-page">
+      <div style="font-size:48px">🔍</div>
+      <p>订单数据无法解析<br>链接可能被截断或已损坏</p>
+      <button class="primary-btn" onclick="go('#/')">我也去点一单</button>
+    </div>`;
+  }
+
+  currentShare = decoded;
+  const o = deserializeOrder(decoded);
+
+  // 本地已有该订单且已支付
+  const local = S.orders.find(x => x.id === o.id);
+  if (local && local.status === 'paid') {
+    const r = { v: 1, oid: o.id, tt: o.total, sn: o.shopName, se: o.shopEmoji, pa: o.payAddress, pn: o.payAddressName, at: local.paidAt || Date.now() };
+    return renderReceipt(encodeData(r));
+  }
+
+  return `
+  <div class="pay-header">
+    <div class="pay-avatar">👤</div>
+    <div class="pay-invite">好友邀请你帮忙代付</div>
+    <div class="pay-amount">¥${o.total.toFixed(2)}</div>
+  </div>
+
+  ${orderDetailCard(o)}
+
+  <div class="card">
+    <div class="co-section-title">收货信息</div>
+    <div style="font-size:13px; color:#666">
+      ${esc(o.receiver.name)} ${esc(o.receiver.phone)}<br>
+      ${esc(o.receiver.address)}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">收款地址</div>
+    <div class="addr-box">
+      <div class="addr-label">${esc(o.payAddressName || '收款账户')}</div>
+      <div class="addr-value">${esc(o.payAddress)}</div>
+    </div>
+    <div class="co-hint">确认代付后，款项将结算至该地址</div>
+  </div>
+
+  <div class="pay-bottom">
+    <button class="primary-btn big" onclick="doPay()">
+      确认代付 ¥${o.total.toFixed(2)}
+    </button>
+  </div>`;
+}
+
+/* ---------- 回执页 ---------- */
+function renderReceipt(encoded) {
+  const r = decodeData(encoded);
+
+  if (!r || !r.oid) {
+    return `<div class="empty-page">
+      <div style="font-size:48px">🔍</div>
+      <p>回执数据无法解析</p>
+      <button class="primary-btn" onclick="go('#/')">回到首页</button>
+    </div>`;
+  }
+
+  // 尝试同步本地订单状态
+  let synced = false;
+  const local = S.orders.find(x => x.id === r.oid);
+  if (local && local.status === 'unpaid') {
+    local.status = 'paid';
+    local.paidAt = r.at || Date.now();
+    save();
+    synced = true;
+  }
+
+  const isOwner = local && local.role === 'owner';
+
+  return `
+  <div class="header-bar plain">
+    <button class="back-btn dark" onclick="go('#/orders')">‹</button>
+    <span style="font-size:16px">支付回执</span>
+  </div>
+
+  <div class="pay-done">
+    <div class="pay-done-ico">✅</div>
+    <div class="pay-done-title">代付成功</div>
+    <div class="pay-done-amount">¥${Number(r.tt).toFixed(2)}</div>
+    <div class="pay-done-sub">已支付给「${esc(r.sn)}」</div>
+    <div class="pay-done-addr">收款地址：${esc(r.pa)}</div>
+    ${synced ? '<div class="sync-note">✓ 本机订单状态已同步为「已支付」</div>' : ''}
+
+    <div class="done-actions">
+      <button class="primary-btn" onclick="copyReceiptEncoded('${encoded}')">复制回执链接发给好友</button>
+      ${isOwner
+        ? `<button class="ghost-btn" onclick="go('#/orders')">查看我的订单</button>`
+        : `<button class="ghost-btn" onclick="copyPayFromReceipt('${encoded}')">再次复制代付链接</button>`}
+      <button class="ghost-btn" onclick="go('#/')">我也去点一单</button>
+    </div>
+
+    <div style="font-size:12px; color:#bbb; margin-top:20px; line-height:1.7">
+      把「回执链接」发回给好友，<br>对方打开后订单会自动标记为已支付
+    </div>
+  </div>`;
+}
+
+/* ---------- 订单详情卡片 ---------- */
+function orderDetailCard(o) {
+  return `
+  <div class="card">
+    <div class="co-shop-name">${o.shopEmoji} ${esc(o.shopName)}</div>
+    ${o.items.map(i => `
+      <div class="co-item">
+        <span class="co-item-emoji">${i.emoji}</span>
+        <span class="co-item-name">${esc(i.name)}</span>
+        <span class="co-item-qty">x${i.qty}</span>
+        <span class="co-item-price">¥${(i.price * i.qty).toFixed(2)}</span>
+      </div>`).join('')}
+    <div class="co-line"><span>配送费</span><span>¥${Number(o.deliveryFee).toFixed(2)}</span></div>
+    <div class="co-line total"><span>合计</span><span class="price">¥${Number(o.total).toFixed(2)}</span></div>
+  </div>`;
+}
+
+/* ---------- 订单列表 ---------- */
+function renderOrders() {
+  if (S.orders.length === 0) {
+    return `<div class="empty-page">
+      <div style="font-size:48px">📋</div>
+      <p>还没有订单</p>
+      <button class="primary-btn" onclick="go('#/')">去点一单</button>
+    </div>`;
+  }
+
+  return `
+  <div class="header-bar plain"><span style="font-size:16px">我的订单</span></div>
+  <div class="order-list">
+    ${S.orders.map(o => {
+      const isPayer = o.role === 'payer';
+      const statusLabel = o.status === 'paid' ? '已支付' : (o.payMethod === 'friend' ? '待好友代付' : '待支付');
+      return `
+      <div class="order-card">
+        <div class="order-top">
+          <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+            <span class="order-role ${isPayer ? 'payer' : ''}">${isPayer ? '我代付的' : '我发起的'}</span>
+            ${o.shopEmoji} ${esc(o.shopName)}
+          </span>
+          <span class="order-status ${o.status}">${statusLabel}</span>
+        </div>
+        <div class="order-items">
+          ${o.items.map(i => `${esc(i.name)} ×${i.qty}`).join('、')}
+        </div>
+        <div class="order-bottom">
+          <span>${fmtTime(o.createdAt)} · ${o.payMethod === 'friend' ? '好友代付' : '自己支付'}</span>
+          <span class="price">¥${Number(o.total).toFixed(2)}</span>
+        </div>
+        <div class="order-actions">
+          ${o.status === 'unpaid' && o.payMethod === 'friend' && !isPayer
+            ? `<button class="mini-btn" onclick="copyPayLink('${o.id}')">复制代付链接</button>` : ''}
+          ${o.status === 'unpaid'
+            ? `<button class="mini-btn primary" onclick="openPay('${o.id}')">去支付</button>` : ''}
+          ${o.status === 'paid' && o.payMethod === 'friend'
+            ? `<button class="mini-btn" onclick="copyReceiptLink('${o.id}')">复制回执</button>` : ''}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------- 设置页 ---------- */
+function renderSettings() {
+  const s = S.settings;
+  const r = s.receiver;
+
+  return `
+  <div class="header-bar plain"><span style="font-size:16px">设置</span></div>
+
+  <div class="card">
+    <div class="card-title">收款地址</div>
+    <div class="field">
+      <label>账户名称</label>
+      <input type="text" value="${esc(s.payAddressName)}"
+             oninput="updateSetting('payAddressName', this.value)"
+             placeholder="例如：商户收款钱包">
+    </div>
+    <div class="field">
+      <label>收款地址</label>
+      <input type="text" value="${esc(s.payAddress)}"
+             oninput="updateSetting('payAddress', this.value)"
+             placeholder="钱包地址 / 收款账号">
+    </div>
+    <div class="hint">代付成功后，款项将结算至该地址。新建订单时自动使用当前地址。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">收货信息</div>
+    <div class="field">
+      <label>收货人</label>
+      <input type="text" value="${esc(r.name)}"
+             oninput="updateSetting('receiver.name', this.value)" placeholder="姓名">
+    </div>
+    <div class="field">
+      <label>联系电话</label>
+      <input type="tel" value="${esc(r.phone)}"
+             oninput="updateSetting('receiver.phone', this.value)" placeholder="手机号">
+    </div>
+    <div class="field">
+      <label>收货地址</label>
+      <input type="text" value="${esc(r.address)}"
+             oninput="updateSetting('receiver.address', this.value)" placeholder="详细地址">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">数据</div>
+    <button class="ghost-btn" style="width:100%" onclick="resetAll()">清空全部数据</button>
+    <div class="hint">订单与设置保存在本机浏览器；代付链接自带订单数据，可跨设备使用。</div>
+  </div>`;
+}
+
+/* =========================================================
+   启动
+   ========================================================= */
+window.addEventListener('hashchange', () => render(false));
+render(false);
+</script>
+</body>
+</html>
